@@ -48,6 +48,7 @@ public class BeatController : MonoBehaviour
 
     private void UpdateBPMUi()
     {
+        if (bpmText == null) return;
         bpmText.text = $"Actual BPM : {beatManager.BPM}";
     }
 }
