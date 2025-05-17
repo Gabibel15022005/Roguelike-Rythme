@@ -1,3 +1,4 @@
+// --- BeatManager.cs ---
 using System;
 using UnityEngine;
 
@@ -42,10 +43,9 @@ public class BeatManager : MonoBehaviour
         bpm = newBpm;
         if (!isPlaying) return;
 
-        double currentDSPTime = AudioSettings.dspTime;
         foreach (var interval in intervals)
         {
-            interval.UpdateBPM(bpm, currentDSPTime);
+            interval.UpdateBPM(bpm, dspStartTime);
         }
     }
 
@@ -60,19 +60,17 @@ public class BeatManager : MonoBehaviour
         }
     }
 }
+
+// --- Intervals.cs ---
 [Serializable]
 public class Intervals
 {
-    [Tooltip("Combien de fois le trigger s'exécute par cycle.")]
     [SerializeField] private int steps = 1;
-
-    [Tooltip("Durée du cycle en nombre de mesures.")]
     [SerializeField, Min(1)] private int cycleLengthInMeasures = 1;
-
-    [Tooltip("Offset en temps relatif dans le cycle, de 0 (début) à 1 (fin).")]
     [Range(0f, 1f)] [SerializeField] private float offset = 0f;
-
     [SerializeField] private Sound actionToCall;
+    public Sound ActionToCall => actionToCall;
+
 
     private double intervalLength;
     private double nextAudioTriggerTime;
@@ -86,20 +84,20 @@ public class Intervals
         double cycleDuration = measureDuration * cycleLengthInMeasures;
         intervalLength = cycleDuration / steps;
 
-        nextAudioTriggerTime = dspStartTime + offset * cycleDuration;
+        nextAudioTriggerTime = Math.Max(dspStartTime + offset * cycleDuration, AudioSettings.dspTime + 0.05);
         nextVisualTriggerTime = nextAudioTriggerTime - SpawnLeadTime;
     }
 
-    public void UpdateBPM(float newBpm, double currentDSPTime)
+    public void UpdateBPM(float newBpm, double dspStartTime)
     {
         double measureDuration = 60.0 / newBpm * 4;
         double cycleDuration = measureDuration * cycleLengthInMeasures;
         intervalLength = cycleDuration / steps;
 
-        // Recalibrer les temps
-        double elapsedSinceStart = currentDSPTime - nextAudioTriggerTime;
-        int beatsAhead = Mathf.FloorToInt((float)(elapsedSinceStart / intervalLength));
-        nextAudioTriggerTime = currentDSPTime + ((beatsAhead + 1) * intervalLength);
+        double timeSinceStart = AudioSettings.dspTime - dspStartTime;
+        double nextInterval = Math.Ceiling((timeSinceStart - offset * cycleDuration) / intervalLength);
+
+        nextAudioTriggerTime = dspStartTime + offset * cycleDuration + nextInterval * intervalLength;
         nextVisualTriggerTime = nextAudioTriggerTime - SpawnLeadTime;
     }
 

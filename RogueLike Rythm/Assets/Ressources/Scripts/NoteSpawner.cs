@@ -17,17 +17,15 @@ public class NoteSpawner : MonoBehaviour
     [Space(30)]
     [SerializeField] private Transform targetPoint;
 
-    [Space(30)]
+    [Space(10)]
     [SerializeField] private BeatManager beatManager;
-
-    [SerializeField] private float noteSpeed = 5f; // en unités/sec
 
     public static Action<Sound> onVisualNote;
 
     private void Awake()
     {
         float distance = Vector3.Distance(kickSpawn.position, targetPoint.position);
-        float travelTime = distance / noteSpeed;
+        float travelTime = distance / 5f; // Valeur de base pour init, corrigée à chaque visual spawn
 
         foreach (var interval in beatManager.Intervals)
         {
@@ -67,17 +65,27 @@ public class NoteSpawner : MonoBehaviour
 
         if (spawnPoint == null || notePrefab == null) return;
 
+        float distance = Vector3.Distance(spawnPoint.position, targetPoint.position);
+
+        // Récupérer le SpawnLeadTime (valeur constante pour ce son)
+        float leadTime = 0.5f;
+        foreach (var interval in beatManager.Intervals)
+        {
+            if (interval.ActionToCall == sound)
+            {
+                leadTime = interval.SpawnLeadTime;
+                break;
+            }
+        }
+
+        float speed = distance / leadTime;
+
         GameObject note = Instantiate(notePrefab, spawnPoint.position, Quaternion.identity);
         NoteMover mover = note.GetComponent<NoteMover>();
 
         if (mover != null)
         {
-            float distance = Vector3.Distance(spawnPoint.position,
-                new Vector3(targetPoint.position.x, spawnPoint.position.y, spawnPoint.position.z));
-
-            float travelTime = distance / noteSpeed;
-
-            mover.MoveTo(targetPoint.position, travelTime);
+            mover.InitMovement(speed);
         }
     }
 }
